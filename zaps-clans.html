@@ -1,0 +1,2144 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5.0, viewport-fit=cover" />
+<meta name="theme-color" content="#06070A" />
+<meta name="description" content="Zaps Clans — KOL leaderboards ranked on real onchain capital." />
+<title>ZAPS · Clans</title>
+<script>
+  // Critical nav function - defined in head so inline onclick always works
+  // Also runs at parse time, before any other JS or async resources load
+  window.switchView = function(target) {
+    var navs = document.querySelectorAll('.nav-item[data-target]');
+    for (var i = 0; i < navs.length; i++) {
+      if (navs[i].getAttribute('data-target') === target) {
+        navs[i].classList.add('on');
+      } else {
+        navs[i].classList.remove('on');
+      }
+    }
+    var views = document.querySelectorAll('.view[data-view]');
+    for (var i = 0; i < views.length; i++) {
+      if (views[i].getAttribute('data-view') === target) {
+        views[i].classList.add('active');
+      } else {
+        views[i].classList.remove('active');
+      }
+    }
+    var main = document.querySelector('.main');
+    if (main) main.scrollTop = 0;
+    return false;
+  };
+  window.toggleJoin = function(btn) {
+    if (btn.classList.contains('joined')) {
+      btn.classList.remove('joined');
+      if (btn.classList.contains('btn-join')) btn.innerHTML = '+ Join';
+    } else {
+      btn.classList.add('joined');
+      if (btn.classList.contains('btn-join')) btn.innerHTML = '✓ Joined';
+    }
+    return false;
+  };
+</script>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,300..800&family=JetBrains+Mono:wght@300..800&family=Instrument+Serif:ital@0;1&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --bg-0:#06070A;
+    --bg-1:#0B0D14;
+    --bg-2:#11141E;
+    --bg-3:#181C2A;
+    --line:#1F2436;
+    --line-2:#2A3047;
+    --text:#F5F6FA;
+    --text-2:#A8AEC2;
+    --text-3:#6B7185;
+    --violet:#A855F7;
+    --violet-2:#7C3AED;
+    --violet-3:#5B21B6;
+    --violet-glow:rgba(168,85,247,0.35);
+    --gold:#FBBF24;
+    --gold-2:#F59E0B;
+    --green:#22C55E;
+    --green-2:#10B981;
+    --red:#F43F5E;
+    --pink:#EC4899;
+    --cyan:#06B6D4;
+
+    /* App layout */
+    --app-max:480px;       /* mobile-like column width on desktop */
+    --nav-h:72px;
+    --topbar-h:56px;
+  }
+
+  *{box-sizing:border-box;margin:0;padding:0;-webkit-font-smoothing:antialiased;}
+  html,body{
+    background:var(--bg-0);color:var(--text);
+    font-family:'Bricolage Grotesque',sans-serif;
+    font-feature-settings:"ss01","ss02","cv01";
+    min-height:100vh;min-height:100dvh;
+    overflow-x:hidden;
+  }
+  body{overscroll-behavior-y:none;}
+  .mono{font-family:'JetBrains Mono',monospace;font-feature-settings:"zero","ss02";}
+
+  /* ============ APP SHELL ============ */
+  .app{
+    position:relative;
+    width:100%;
+    max-width:var(--app-max);
+    margin:0 auto;
+    min-height:100vh;min-height:100dvh;
+    background:var(--bg-0);
+    display:flex;flex-direction:column;
+    /* desktop framing - subtle border so the column feels intentional */
+    box-shadow:0 0 0 1px rgba(255,255,255,0.04);
+    overflow:hidden;
+  }
+  /* on real mobile, no shadow / border needed */
+  @media(max-width:520px){
+    .app{box-shadow:none;}
+  }
+
+  /* desktop background: ambient glow around the app column */
+  @media(min-width:1024px){
+    body{
+      background:
+        radial-gradient(ellipse 800px 600px at 50% 0%, rgba(124,58,237,0.10), transparent 60%),
+        radial-gradient(ellipse 600px 600px at 50% 100%, rgba(168,85,247,0.06), transparent 60%),
+        var(--bg-0);
+    }
+    body::before{
+      content:"";position:fixed;inset:0;pointer-events:none;
+      background-image:
+        linear-gradient(rgba(255,255,255,0.012) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(255,255,255,0.012) 1px, transparent 1px);
+      background-size: 64px 64px;
+      mask-image: radial-gradient(ellipse at 50% 50%, black 30%, transparent 80%);
+    }
+    .app{
+      box-shadow:
+        0 0 0 1px rgba(255,255,255,0.04),
+        0 60px 120px -30px rgba(0,0,0,0.7),
+        0 0 100px -30px rgba(168,85,247,0.18);
+    }
+  }
+
+  /* ============ TOP BAR ============ */
+  .topbar{
+    flex:0 0 auto;
+    height:var(--topbar-h);
+    padding:0 18px;
+    display:flex;align-items:center;justify-content:space-between;
+    background:rgba(11,13,20,0.85);
+    backdrop-filter:blur(16px);
+    -webkit-backdrop-filter:blur(16px);
+    border-bottom:1px solid var(--line);
+    position:sticky;top:0;z-index:50;
+  }
+  .brand{display:flex;align-items:center;gap:10px;}
+  .bolt{
+    width:30px;height:30px;display:grid;place-items:center;
+    background:linear-gradient(135deg,#A855F7 0%,#5B21B6 100%);
+    border-radius:8px;
+    box-shadow:0 0 16px var(--violet-glow), inset 0 0 0 1px rgba(255,255,255,0.12);
+  }
+  .bolt svg{width:14px;height:14px;}
+  .brand-name{font-weight:700;font-size:15px;letter-spacing:-0.015em;}
+  .brand-name span{color:var(--violet);}
+  .topbar-right{display:flex;align-items:center;gap:8px;}
+  .topbar-icon{
+    width:34px;height:34px;display:grid;place-items:center;
+    background:rgba(255,255,255,0.04);border:1px solid rgba(255,255,255,0.05);
+    border-radius:9px;cursor:pointer;color:var(--text-2);
+    transition:all 0.15s ease;
+  }
+  .topbar-icon:hover{background:rgba(168,85,247,0.10);color:var(--violet);}
+  .topbar-icon svg{width:15px;height:15px;}
+  .topbar-icon .badge{
+    position:absolute;top:6px;right:6px;width:7px;height:7px;
+    background:var(--red);border-radius:50%;
+    box-shadow:0 0 8px var(--red);
+  }
+  .topbar-icon{position:relative;}
+
+  /* ============ MAIN AREA ============ */
+  .main{
+    flex:1 1 auto;
+    overflow-y:auto;
+    overflow-x:hidden;
+    -webkit-overflow-scrolling:touch;
+    padding-bottom:calc(var(--nav-h) + 16px);
+    position:relative;
+  }
+  .main::-webkit-scrollbar{width:0;display:none;}
+
+  .pulse-dot{width:7px;height:7px;border-radius:50%;background:var(--green);box-shadow:0 0 12px var(--green);animation:pulse 1.6s ease-in-out infinite;display:inline-block;}
+  @keyframes pulse{0%,100%{opacity:1;transform:scale(1);}50%{opacity:0.5;transform:scale(1.3);}}
+
+  /* ============ VIEW SWITCHING ============ */
+  .view{display:none;}
+  .view.active{display:block;animation:fadeIn 0.25s ease;}
+  @keyframes fadeIn{from{opacity:0;transform:translateY(4px);}to{opacity:1;transform:translateY(0);}}
+
+  /* ============================================================ */
+  /* ============== VIEW 1: CLAN ================================ */
+  /* ============================================================ */
+
+  .clan-hero{
+    position:relative;padding:18px 20px 22px;
+    background:
+      radial-gradient(ellipse 500px 220px at 50% 0%, rgba(168,85,247,0.30), transparent 70%),
+      linear-gradient(180deg,#1A0F2E 0%,#0A0B14 100%);
+    overflow:hidden;
+  }
+  .clan-hero::before{
+    content:"";position:absolute;inset:0;
+    background-image:
+      linear-gradient(rgba(168,85,247,0.05) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(168,85,247,0.05) 1px, transparent 1px);
+    background-size: 24px 24px;
+    mask-image: radial-gradient(ellipse at 50% 0%, black, transparent 70%);
+  }
+  .live-pill-row{display:flex;justify-content:center;margin-bottom:14px;position:relative;}
+  .live-pill{
+    display:flex;align-items:center;gap:7px;
+    padding:5px 11px;background:rgba(34,197,94,0.12);border:1px solid rgba(34,197,94,0.3);
+    border-radius:99px;font-family:'JetBrains Mono',monospace;font-size:9.5px;letter-spacing:0.16em;
+    color:var(--green);text-transform:uppercase;font-weight:600;
+  }
+  .live-pill .pulse-dot{width:5px;height:5px;}
+
+  .kol-card{position:relative;display:flex;align-items:center;gap:14px;}
+  .kol-avatar{
+    position:relative;width:64px;height:64px;border-radius:18px;flex-shrink:0;
+    background:conic-gradient(from 220deg, #A855F7, #EC4899, #FBBF24, #A855F7);
+    padding:2.5px;
+  }
+  .kol-avatar-inner{
+    width:100%;height:100%;border-radius:15px;background:#1A0F2E;
+    display:grid;place-items:center;font-family:'Bricolage Grotesque',sans-serif;
+    font-weight:700;font-size:24px;color:#fff;letter-spacing:-0.04em;
+    background-image:linear-gradient(135deg,#7C3AED 0%,#1A0F2E 100%);
+  }
+  .kol-tier{
+    position:absolute;bottom:-4px;right:-4px;width:22px;height:22px;
+    border-radius:50%;background:linear-gradient(135deg,#FBBF24,#F59E0B);
+    display:grid;place-items:center;border:2.5px solid #0A0B14;
+    font-size:11px;font-weight:700;color:#1a0a00;
+  }
+  .kol-info{flex:1;min-width:0;}
+  .kol-name{display:flex;align-items:center;gap:6px;margin-bottom:3px;}
+  .kol-name h2{font-size:18px;font-weight:600;letter-spacing:-0.02em;}
+  .verify{width:14px;height:14px;color:var(--violet);flex-shrink:0;}
+  .kol-handle{font-family:'JetBrains Mono',monospace;font-size:11px;color:var(--text-3);margin-bottom:5px;}
+  .kol-stat-row{display:flex;gap:10px;font-family:'JetBrains Mono',monospace;font-size:10px;color:var(--text-2);flex-wrap:wrap;}
+  .kol-stat-row strong{color:var(--text);font-weight:600;}
+
+  /* big stat */
+  .clan-bignum{margin-top:20px;position:relative;}
+  .bignum-label{font-family:'JetBrains Mono',monospace;font-size:9px;letter-spacing:0.22em;color:var(--text-3);text-transform:uppercase;display:flex;align-items:center;gap:8px;}
+  .bignum-label::before{content:"";width:18px;height:1px;background:var(--violet);}
+  .bignum-row{display:flex;align-items:baseline;gap:10px;margin-top:6px;flex-wrap:wrap;}
+  .bignum{font-family:'Bricolage Grotesque',sans-serif;font-weight:300;font-size:52px;letter-spacing:-0.045em;line-height:1;}
+  .bignum em{font-family:'Instrument Serif',serif;font-style:italic;font-weight:400;color:var(--violet);}
+  .bignum-delta{
+    font-family:'JetBrains Mono',monospace;font-size:11px;font-weight:600;color:var(--green);
+    display:inline-flex;align-items:center;gap:3px;padding:3px 7px;
+    background:rgba(34,197,94,0.10);border-radius:6px;
+  }
+  .bignum-sub{font-family:'JetBrains Mono',monospace;font-size:10px;color:var(--text-3);margin-top:6px;letter-spacing:0.05em;}
+
+  .flow-bar{
+    margin-top:16px;height:6px;border-radius:3px;background:rgba(255,255,255,0.04);
+    overflow:hidden;position:relative;
+  }
+  .flow-bar::after{
+    content:"";position:absolute;inset:0;
+    background:linear-gradient(90deg, transparent, var(--violet) 50%, transparent);
+    animation:flow 2.4s linear infinite;width:40%;
+  }
+  @keyframes flow{0%{left:-40%;}100%{left:100%;}}
+
+  /* metric grid */
+  .metric-grid{
+    margin:18px 20px 0;
+    display:grid;grid-template-columns:1fr 1fr 1fr;gap:1px;
+    background:var(--line);border-radius:14px;overflow:hidden;border:1px solid var(--line);
+  }
+  .metric{padding:13px;background:var(--bg-1);display:flex;flex-direction:column;gap:4px;}
+  .metric-label{font-family:'JetBrains Mono',monospace;font-size:8.5px;letter-spacing:0.16em;color:var(--text-3);text-transform:uppercase;}
+  .metric-value{font-family:'Bricolage Grotesque',sans-serif;font-weight:600;font-size:18px;letter-spacing:-0.02em;}
+  .metric-value.green{color:var(--green);}
+  .metric-value.violet{color:var(--violet);}
+
+  /* section header */
+  .sec-head{
+    padding:26px 20px 12px;display:flex;justify-content:space-between;align-items:center;
+  }
+  .sec-head h3{font-size:14px;font-weight:600;letter-spacing:-0.01em;display:flex;align-items:center;gap:6px;}
+  .sec-head h3 svg{width:14px;height:14px;color:var(--violet);}
+  .sec-tab-row{display:flex;gap:4px;font-family:'JetBrains Mono',monospace;font-size:9.5px;font-weight:600;letter-spacing:0.06em;}
+  .sec-tab{padding:5px 9px;border-radius:6px;color:var(--text-3);text-transform:uppercase;cursor:pointer;}
+  .sec-tab.on{background:rgba(168,85,247,0.16);color:var(--violet);}
+
+  /* call card */
+  .call-card{
+    margin:0 20px;padding:16px;border-radius:14px;
+    background:linear-gradient(135deg, rgba(168,85,247,0.10) 0%, rgba(124,58,237,0.05) 100%);
+    border:1px solid rgba(168,85,247,0.24);
+    position:relative;overflow:hidden;
+  }
+  .call-card::before{
+    content:"";position:absolute;top:0;left:0;width:3px;height:100%;
+    background:linear-gradient(180deg,var(--violet),var(--pink));
+  }
+  .call-row1{display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:12px;}
+  .call-token{display:flex;align-items:center;gap:9px;}
+  .token-glyph{
+    width:36px;height:36px;border-radius:50%;
+    background:linear-gradient(135deg,#FBBF24,#EF4444);
+    display:grid;place-items:center;font-family:'JetBrains Mono',monospace;
+    font-weight:700;font-size:13px;color:#1a0a00;letter-spacing:-0.02em;
+  }
+  .call-token-info{display:flex;flex-direction:column;}
+  .call-token-name{font-size:15px;font-weight:600;letter-spacing:-0.01em;}
+  .call-token-meta{font-family:'JetBrains Mono',monospace;font-size:9.5px;color:var(--text-3);margin-top:2px;letter-spacing:0.05em;}
+  .call-time{font-family:'JetBrains Mono',monospace;font-size:9.5px;color:var(--violet);text-transform:uppercase;letter-spacing:0.12em;font-weight:600;}
+
+  .call-stats{display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;margin-bottom:14px;}
+  .call-stat{display:flex;flex-direction:column;gap:2px;}
+  .call-stat-l{font-family:'JetBrains Mono',monospace;font-size:8.5px;color:var(--text-3);letter-spacing:0.1em;text-transform:uppercase;}
+  .call-stat-v{font-family:'Bricolage Grotesque',sans-serif;font-weight:600;font-size:14px;letter-spacing:-0.02em;}
+  .call-stat-v.up{color:var(--green);}
+
+  .call-progress{display:flex;align-items:center;gap:10px;margin-bottom:14px;}
+  .call-progress-text{font-family:'JetBrains Mono',monospace;font-size:9.5px;color:var(--text-2);flex-shrink:0;}
+  .call-progress-text strong{color:var(--violet);font-weight:600;}
+  .call-progress-bar{flex:1;height:4px;border-radius:2px;background:rgba(255,255,255,0.06);overflow:hidden;}
+  .call-progress-fill{height:100%;width:34%;background:linear-gradient(90deg,var(--violet),var(--pink));border-radius:2px;transition:width 0.6s ease;}
+
+  .call-cta{
+    display:flex;align-items:center;justify-content:center;gap:6px;
+    padding:13px;border-radius:11px;
+    background:linear-gradient(135deg,#A855F7,#7C3AED);
+    color:#fff;font-weight:600;font-size:14px;letter-spacing:-0.005em;
+    box-shadow:0 8px 24px -8px var(--violet-glow), inset 0 1px 0 rgba(255,255,255,0.18);
+    cursor:pointer;border:none;width:100%;
+    transition:transform 0.1s ease;
+  }
+  .call-cta:hover{transform:translateY(-1px);}
+  .call-cta:active{transform:translateY(0);}
+  .call-cta svg{width:14px;height:14px;}
+
+  /* leaderboard */
+  .lb-list{padding:0 20px;display:flex;flex-direction:column;gap:6px;}
+  .lb-row{
+    display:grid;grid-template-columns:36px 1fr auto;gap:12px;align-items:center;
+    padding:12px 14px;border-radius:12px;background:var(--bg-1);
+    border:1px solid var(--line);
+    position:relative;overflow:hidden;
+    cursor:pointer;
+    transition:all 0.15s ease;
+  }
+  .lb-row:hover{border-color:var(--line-2);}
+  .lb-row.you{
+    background:linear-gradient(135deg, rgba(168,85,247,0.14) 0%, rgba(168,85,247,0.04) 100%);
+    border-color:rgba(168,85,247,0.4);
+  }
+  .lb-row.you::before{
+    content:"YOU";position:absolute;top:8px;right:14px;
+    font-family:'JetBrains Mono',monospace;font-size:8px;color:var(--violet);
+    letter-spacing:0.18em;font-weight:700;
+  }
+  .lb-rank{
+    font-family:'JetBrains Mono',monospace;font-weight:700;font-size:14px;
+    color:var(--text-3);text-align:center;
+  }
+  .lb-rank.top1{color:var(--gold);}
+  .lb-rank.top2{color:#D1D5DB;}
+  .lb-rank.top3{color:#D97706;}
+  .lb-rank-up{color:var(--green);font-size:9px;display:block;margin-top:-2px;font-weight:600;}
+  .lb-rank-down{color:var(--red);font-size:9px;display:block;margin-top:-2px;font-weight:600;}
+  .lb-user{display:flex;align-items:center;gap:10px;min-width:0;}
+  .lb-avatar{
+    width:32px;height:32px;border-radius:9px;flex-shrink:0;
+    display:grid;place-items:center;font-family:'JetBrains Mono',monospace;
+    font-weight:700;font-size:11px;color:#fff;
+  }
+  .lb-user-info{display:flex;flex-direction:column;min-width:0;}
+  .lb-user-name{font-size:13px;font-weight:600;letter-spacing:-0.005em;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+  .lb-user-meta{font-family:'JetBrains Mono',monospace;font-size:9px;color:var(--text-3);letter-spacing:0.04em;display:flex;align-items:center;gap:5px;margin-top:2px;}
+  .lb-zscore{padding:1px 5px;border-radius:4px;background:rgba(168,85,247,0.16);color:var(--violet);font-weight:600;}
+  .lb-zaps-col{text-align:right;}
+  .lb-zaps{
+    font-family:'JetBrains Mono',monospace;font-weight:700;font-size:13px;
+    letter-spacing:-0.01em;
+  }
+  .lb-cap{
+    font-family:'JetBrains Mono',monospace;font-size:9.5px;color:var(--text-3);
+    letter-spacing:0.04em;margin-top:2px;
+  }
+
+  /* ============================================================ */
+  /* ============== VIEW 2: EARN DASHBOARD ===================== */
+  /* ============================================================ */
+
+  .dash-hero{
+    position:relative;padding:20px 20px 24px;overflow:hidden;
+    background:linear-gradient(180deg,#0A0B14 0%,#0A0B14 100%);
+  }
+  .dash-greeting{font-family:'JetBrains Mono',monospace;font-size:10px;color:var(--text-3);letter-spacing:0.15em;text-transform:uppercase;margin-bottom:6px;}
+  .dash-name{font-size:24px;font-weight:600;letter-spacing:-0.02em;margin-bottom:20px;}
+  .dash-name span{color:var(--violet);}
+
+  .dash-zaps-card{
+    padding:20px;border-radius:18px;position:relative;overflow:hidden;
+    background:
+      radial-gradient(ellipse 220px 110px at 30% 0%, rgba(168,85,247,0.32), transparent 70%),
+      linear-gradient(135deg,#1B0D33 0%,#0F0820 100%);
+    border:1px solid rgba(168,85,247,0.22);
+    box-shadow:0 30px 60px -30px rgba(124,58,237,0.5);
+  }
+  .dash-zaps-card::before{
+    content:"";position:absolute;top:-50px;right:-50px;width:160px;height:160px;
+    background:radial-gradient(circle, rgba(168,85,247,0.4), transparent 60%);
+    filter:blur(20px);
+  }
+  .zaps-label{font-family:'JetBrains Mono',monospace;font-size:9.5px;letter-spacing:0.2em;color:var(--text-3);text-transform:uppercase;display:flex;align-items:center;gap:8px;margin-bottom:10px;position:relative;}
+  .zaps-bolt{
+    width:14px;height:14px;display:grid;place-items:center;
+    background:var(--violet);border-radius:4px;
+  }
+  .zaps-bolt svg{width:8px;height:8px;color:#fff;}
+  .zaps-num{
+    font-family:'Bricolage Grotesque',sans-serif;font-weight:300;font-size:56px;letter-spacing:-0.05em;line-height:1;
+    background:linear-gradient(135deg,#FFFFFF 0%,#A855F7 100%);
+    background-clip:text;-webkit-background-clip:text;color:transparent;
+    position:relative;
+  }
+  .zaps-equiv{font-family:'JetBrains Mono',monospace;font-size:11px;color:var(--text-2);margin-top:8px;letter-spacing:0.04em;position:relative;}
+  .zaps-equiv strong{color:var(--green);font-weight:600;}
+  .zaps-equiv .plus{color:var(--gold);}
+
+  .zaps-split{display:grid;grid-template-columns:1fr 1fr;gap:1px;margin-top:18px;background:rgba(255,255,255,0.06);border-radius:10px;overflow:hidden;position:relative;}
+  .zaps-split-item{padding:11px 13px;background:rgba(0,0,0,0.3);}
+  .zaps-split-l{font-family:'JetBrains Mono',monospace;font-size:8.5px;letter-spacing:0.14em;color:var(--text-3);text-transform:uppercase;}
+  .zaps-split-v{font-family:'Bricolage Grotesque',sans-serif;font-weight:600;font-size:17px;margin-top:4px;letter-spacing:-0.02em;}
+
+  /* streak */
+  .streak-row{
+    margin:18px 20px;padding:14px 16px;border-radius:14px;
+    background:linear-gradient(135deg, rgba(251,191,36,0.10), rgba(244,63,94,0.06));
+    border:1px solid rgba(251,191,36,0.25);
+    display:flex;align-items:center;gap:14px;
+  }
+  .streak-flame{
+    width:44px;height:44px;border-radius:12px;flex-shrink:0;
+    background:linear-gradient(135deg,#F59E0B 0%,#EF4444 100%);
+    display:grid;place-items:center;font-size:22px;
+    box-shadow:0 0 24px rgba(245,158,11,0.5);
+    animation:flame 2s ease-in-out infinite;
+  }
+  @keyframes flame{0%,100%{transform:scale(1) rotate(-2deg);}50%{transform:scale(1.06) rotate(2deg);}}
+  .streak-info{flex:1;min-width:0;}
+  .streak-num{font-size:18px;font-weight:600;letter-spacing:-0.02em;}
+  .streak-num strong{color:var(--gold);}
+  .streak-mult{font-family:'JetBrains Mono',monospace;font-size:10px;color:var(--text-2);margin-top:3px;letter-spacing:0.04em;}
+  .streak-warn{font-family:'JetBrains Mono',monospace;font-size:9.5px;color:var(--red);margin-top:5px;letter-spacing:0.06em;font-weight:600;}
+  .streak-warn::before{content:"⚠ ";}
+
+  /* gap card */
+  .gap-card{
+    margin:0 20px 18px;padding:20px;border-radius:14px;
+    background:var(--bg-1);border:1px solid var(--line);position:relative;overflow:hidden;
+  }
+  .gap-card::before{
+    content:"";position:absolute;top:0;left:0;right:0;height:3px;
+    background:linear-gradient(90deg,var(--violet),var(--pink),var(--gold));
+  }
+  .gap-head{display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:16px;}
+  .gap-tier-from{font-family:'JetBrains Mono',monospace;font-size:9.5px;color:var(--text-3);letter-spacing:0.16em;text-transform:uppercase;}
+  .gap-tier-cur{font-size:14px;font-weight:600;margin-top:3px;}
+  .gap-tier-arrow{display:flex;align-items:center;color:var(--text-3);font-family:'JetBrains Mono',monospace;font-size:14px;padding-top:18px;}
+  .gap-tier-to{text-align:right;}
+  .gap-tier-next{font-family:'JetBrains Mono',monospace;font-size:9.5px;color:var(--violet);letter-spacing:0.16em;text-transform:uppercase;}
+  .gap-tier-tname{font-size:14px;font-weight:600;margin-top:3px;color:var(--violet);}
+
+  .gap-line{display:flex;align-items:baseline;gap:10px;margin-bottom:8px;}
+  .gap-line-l{font-family:'JetBrains Mono',monospace;font-size:10px;color:var(--text-3);letter-spacing:0.06em;flex:1;}
+  .gap-line-v{font-family:'JetBrains Mono',monospace;font-size:13px;font-weight:600;}
+
+  .gap-delta{
+    margin-top:14px;padding:14px;border-radius:10px;
+    background:rgba(168,85,247,0.10);border:1px dashed rgba(168,85,247,0.3);
+    text-align:center;
+  }
+  .gap-delta-l{font-family:'JetBrains Mono',monospace;font-size:9px;color:var(--violet);letter-spacing:0.18em;text-transform:uppercase;font-weight:700;}
+  .gap-delta-v{
+    font-family:'Bricolage Grotesque',sans-serif;font-weight:300;font-size:32px;letter-spacing:-0.04em;line-height:1;margin-top:6px;
+  }
+  .gap-delta-v em{font-family:'Instrument Serif',serif;font-style:italic;color:var(--gold);}
+  .gap-delta-sub{font-family:'JetBrains Mono',monospace;font-size:10px;color:var(--text-2);margin-top:7px;letter-spacing:0.04em;}
+
+  .gap-action{
+    margin-top:14px;padding:12px;border-radius:10px;
+    background:rgba(168,85,247,0.05);border:1px solid var(--line);
+    font-size:12px;color:var(--text-2);line-height:1.5;
+  }
+  .gap-action strong{color:var(--violet);}
+
+  /* opportunity feed */
+  .opp-list{padding:0 20px 24px;display:flex;flex-direction:column;gap:8px;}
+  .opp-card{
+    padding:14px;border-radius:12px;background:var(--bg-1);
+    border:1px solid var(--line);display:flex;gap:12px;align-items:center;
+    cursor:pointer;transition:all 0.15s ease;
+  }
+  .opp-card:hover{border-color:var(--line-2);transform:translateY(-1px);}
+  .opp-card.urgent{border-color:rgba(244,63,94,0.3);background:linear-gradient(135deg, rgba(244,63,94,0.06), transparent);}
+  .opp-icon{
+    width:38px;height:38px;border-radius:10px;flex-shrink:0;display:grid;place-items:center;
+  }
+  .opp-icon.violet{background:rgba(168,85,247,0.16);color:var(--violet);}
+  .opp-icon.gold{background:rgba(251,191,36,0.14);color:var(--gold);}
+  .opp-icon.red{background:rgba(244,63,94,0.14);color:var(--red);}
+  .opp-icon svg{width:17px;height:17px;}
+  .opp-body{flex:1;min-width:0;}
+  .opp-title{font-size:13px;font-weight:600;letter-spacing:-0.01em;}
+  .opp-sub{font-family:'JetBrains Mono',monospace;font-size:9.5px;color:var(--text-3);margin-top:3px;letter-spacing:0.04em;}
+  .opp-reward{
+    font-family:'JetBrains Mono',monospace;font-weight:700;font-size:13px;
+    color:var(--violet);text-align:right;flex-shrink:0;
+  }
+  .opp-reward small{display:block;color:var(--text-3);font-weight:500;font-size:8.5px;letter-spacing:0.1em;text-transform:uppercase;margin-top:2px;}
+  .opp-reward.red{color:var(--red);}
+
+  /* ============================================================ */
+  /* ============== VIEW 3: TAPE ================================ */
+  /* ============================================================ */
+
+  .tape-hero{
+    padding:20px 20px 16px;
+    background:linear-gradient(180deg,#0F0A1F 0%,#0A0B14 100%);
+    border-bottom:1px solid var(--line);
+  }
+  .tape-title{display:flex;align-items:center;gap:10px;margin-bottom:14px;}
+  .tape-title h2{font-size:24px;font-weight:600;letter-spacing:-0.025em;}
+  .tape-stats{display:flex;gap:18px;font-family:'JetBrains Mono',monospace;font-size:10.5px;color:var(--text-3);letter-spacing:0.04em;flex-wrap:wrap;}
+  .tape-stats strong{color:var(--text);font-weight:600;}
+  .tape-stats em{font-style:normal;color:var(--green);}
+
+  .tape-filters{
+    display:flex;gap:6px;padding:14px 20px 8px;overflow-x:auto;
+    scrollbar-width:none;
+  }
+  .tape-filters::-webkit-scrollbar{display:none;}
+  .filter-pill{
+    padding:7px 12px;border-radius:99px;flex-shrink:0;
+    background:var(--bg-1);border:1px solid var(--line);
+    font-family:'JetBrains Mono',monospace;font-size:9.5px;font-weight:600;
+    letter-spacing:0.06em;text-transform:uppercase;color:var(--text-2);cursor:pointer;
+    transition:all 0.15s ease;
+  }
+  .filter-pill:hover{border-color:var(--line-2);}
+  .filter-pill.on{background:rgba(168,85,247,0.16);border-color:rgba(168,85,247,0.4);color:var(--violet);}
+
+  /* tape ticks */
+  .tape-list{padding:6px 20px 24px;display:flex;flex-direction:column;}
+  .tick{
+    display:grid;grid-template-columns:auto 1fr auto;gap:14px;align-items:flex-start;
+    padding:15px 0;border-bottom:1px solid var(--line);position:relative;
+  }
+  .tick.flash{
+    background:linear-gradient(90deg, rgba(168,85,247,0.08), transparent);
+    margin:0 -20px;padding-left:20px;padding-right:20px;
+    animation:flash 0.6s ease;
+  }
+  @keyframes flash{0%{background:rgba(168,85,247,0.18);}100%{background:linear-gradient(90deg, rgba(168,85,247,0.08), transparent);}}
+  .tick:last-child{border-bottom:none;}
+
+  .tick-time{
+    font-family:'JetBrains Mono',monospace;font-size:9.5px;color:var(--text-3);
+    letter-spacing:0.04em;padding-top:3px;font-weight:600;width:42px;
+  }
+  .tick-time.now{color:var(--violet);}
+  .tick-body{min-width:0;}
+  .tick-line1{display:flex;align-items:center;gap:8px;margin-bottom:5px;flex-wrap:wrap;}
+  .tick-kol{display:flex;align-items:center;gap:7px;}
+  .tick-kol-av{
+    width:20px;height:20px;border-radius:6px;display:grid;place-items:center;
+    font-family:'JetBrains Mono',monospace;font-size:9px;font-weight:700;color:#fff;
+  }
+  .tick-kol-name{font-size:12.5px;font-weight:600;letter-spacing:-0.005em;}
+  .tick-action{
+    font-family:'JetBrains Mono',monospace;font-size:9px;letter-spacing:0.14em;text-transform:uppercase;font-weight:700;
+    padding:2px 6px;border-radius:4px;
+  }
+  .tick-action.call{background:rgba(168,85,247,0.16);color:var(--violet);}
+  .tick-action.buy{background:rgba(34,197,94,0.14);color:var(--green);}
+  .tick-action.exit{background:rgba(244,63,94,0.14);color:var(--red);}
+  .tick-action.lp{background:rgba(6,182,212,0.14);color:var(--cyan);}
+
+  .tick-detail{font-size:12.5px;color:var(--text-2);line-height:1.45;}
+  .tick-detail b{color:var(--text);font-weight:600;}
+  .tick-detail span.ticker{font-family:'JetBrains Mono',monospace;color:var(--gold);font-weight:600;}
+
+  .tick-meta{
+    margin-top:6px;display:flex;gap:12px;font-family:'JetBrains Mono',monospace;font-size:9.5px;
+    color:var(--text-3);letter-spacing:0.04em;flex-wrap:wrap;
+  }
+  .tick-meta strong{color:var(--text-2);font-weight:600;}
+  .tick-zaps{
+    font-family:'JetBrains Mono',monospace;font-size:11.5px;font-weight:700;
+    color:var(--violet);text-align:right;padding-top:3px;
+  }
+  .tick-zaps small{display:block;color:var(--text-3);font-weight:500;font-size:8.5px;letter-spacing:0.1em;text-transform:uppercase;margin-top:2px;}
+
+  /* ============================================================ */
+  /* ============== VIEW 4: PROFILE ============================ */
+  /* ============================================================ */
+
+  .profile-hero{
+    padding:32px 20px 24px;text-align:center;
+    background:
+      radial-gradient(ellipse 400px 200px at 50% 0%, rgba(168,85,247,0.20), transparent 70%),
+      linear-gradient(180deg,#0F0A1F 0%,#0A0B14 100%);
+    border-bottom:1px solid var(--line);
+  }
+  .profile-avatar{
+    width:88px;height:88px;border-radius:24px;margin:0 auto 14px;
+    background:conic-gradient(from 220deg, #A855F7, #7C3AED, #5B21B6, #A855F7);
+    padding:3px;
+  }
+  .profile-avatar-inner{
+    width:100%;height:100%;border-radius:21px;
+    background:linear-gradient(135deg,#7C3AED 0%,#1A0F2E 100%);
+    display:grid;place-items:center;font-weight:700;font-size:32px;color:#fff;letter-spacing:-0.04em;
+  }
+  .profile-name{font-size:22px;font-weight:600;letter-spacing:-0.02em;margin-bottom:4px;}
+  .profile-handle{font-family:'JetBrains Mono',monospace;font-size:11px;color:var(--text-3);letter-spacing:0.04em;}
+  .profile-tier{
+    display:inline-flex;align-items:center;gap:6px;
+    margin-top:14px;padding:5px 12px;border-radius:99px;
+    background:rgba(168,85,247,0.12);border:1px solid rgba(168,85,247,0.3);
+    font-family:'JetBrains Mono',monospace;font-size:10px;font-weight:600;
+    letter-spacing:0.16em;color:var(--violet);text-transform:uppercase;
+  }
+
+  .profile-stats{
+    display:grid;grid-template-columns:repeat(3,1fr);gap:1px;
+    background:var(--line);margin:0 20px;border-radius:14px;overflow:hidden;
+    border:1px solid var(--line);margin-top:18px;
+  }
+  .profile-stat{padding:14px;background:var(--bg-1);text-align:center;}
+  .profile-stat-l{font-family:'JetBrains Mono',monospace;font-size:8.5px;letter-spacing:0.16em;color:var(--text-3);text-transform:uppercase;}
+  .profile-stat-v{font-family:'Bricolage Grotesque',sans-serif;font-weight:600;font-size:18px;letter-spacing:-0.02em;margin-top:4px;}
+  .profile-stat-v.violet{color:var(--violet);}
+
+  .profile-section{padding:20px 20px 0;}
+  .profile-section h3{font-size:13px;font-weight:600;letter-spacing:-0.005em;color:var(--text-3);text-transform:uppercase;letter-spacing:0.12em;margin-bottom:12px;font-family:'JetBrains Mono',monospace;}
+
+  .my-clans{display:flex;flex-direction:column;gap:8px;margin-bottom:8px;}
+  .clan-item{
+    padding:12px 14px;border-radius:11px;background:var(--bg-1);border:1px solid var(--line);
+    display:flex;align-items:center;gap:12px;cursor:pointer;
+    transition:all 0.15s ease;
+  }
+  .clan-item:hover{border-color:var(--line-2);}
+  .clan-item-av{
+    width:36px;height:36px;border-radius:10px;flex-shrink:0;
+    display:grid;place-items:center;font-weight:700;font-size:14px;color:#fff;
+  }
+  .clan-item-info{flex:1;min-width:0;}
+  .clan-item-name{font-size:13px;font-weight:600;letter-spacing:-0.005em;}
+  .clan-item-meta{font-family:'JetBrains Mono',monospace;font-size:10px;color:var(--text-3);margin-top:2px;letter-spacing:0.04em;}
+  .clan-item-rank{
+    font-family:'JetBrains Mono',monospace;font-size:11px;font-weight:700;
+    color:var(--violet);
+  }
+  .clan-item-rank small{display:block;color:var(--text-3);font-weight:500;font-size:8.5px;letter-spacing:0.1em;text-transform:uppercase;margin-top:2px;}
+
+  .settings-list{display:flex;flex-direction:column;}
+  .setting-item{
+    display:flex;align-items:center;gap:14px;padding:14px 0;
+    border-bottom:1px solid var(--line);cursor:pointer;
+  }
+  .setting-item:last-child{border-bottom:none;}
+  .setting-icon{
+    width:32px;height:32px;border-radius:9px;flex-shrink:0;display:grid;place-items:center;
+    background:rgba(255,255,255,0.04);color:var(--text-2);
+  }
+  .setting-icon svg{width:15px;height:15px;}
+  .setting-label{flex:1;font-size:13.5px;font-weight:500;}
+  .setting-arrow{color:var(--text-3);}
+  .setting-arrow svg{width:14px;height:14px;}
+
+  /* ============================================================ */
+  /* ============== VIEW 5: EXPLORE ============================ */
+  /* ============================================================ */
+
+  .explore-hero{
+    padding:20px 20px 16px;
+    background:
+      radial-gradient(ellipse 400px 200px at 50% 0%, rgba(168,85,247,0.18), transparent 70%),
+      linear-gradient(180deg,#0F0A1F 0%,#0A0B14 100%);
+    border-bottom:1px solid var(--line);
+  }
+  .explore-title{display:flex;align-items:baseline;justify-content:space-between;margin-bottom:14px;flex-wrap:wrap;gap:8px;}
+  .explore-title h2{font-size:24px;font-weight:600;letter-spacing:-0.025em;}
+  .explore-title-meta{font-family:'JetBrains Mono',monospace;font-size:10px;color:var(--text-3);letter-spacing:0.06em;}
+  .explore-title-meta strong{color:var(--text);font-weight:600;}
+
+  .search-bar{
+    display:flex;align-items:center;gap:10px;
+    padding:11px 14px;border-radius:12px;
+    background:var(--bg-1);border:1px solid var(--line);
+    transition:border-color 0.15s ease;
+  }
+  .search-bar:focus-within{border-color:rgba(168,85,247,0.4);}
+  .search-bar svg{width:16px;height:16px;color:var(--text-3);flex-shrink:0;}
+  .search-bar input{
+    flex:1;background:transparent;border:none;outline:none;
+    color:var(--text);font-family:inherit;font-size:13.5px;letter-spacing:-0.005em;
+    min-width:0;
+  }
+  .search-bar input::placeholder{color:var(--text-3);}
+
+  .explore-filters{
+    display:flex;gap:6px;padding:14px 20px 10px;overflow-x:auto;
+    scrollbar-width:none;
+  }
+  .explore-filters::-webkit-scrollbar{display:none;}
+
+  /* featured clan card */
+  .featured-section{padding:20px 20px 0;}
+  .featured-label{
+    display:flex;align-items:center;gap:8px;
+    font-family:'JetBrains Mono',monospace;font-size:9.5px;letter-spacing:0.18em;
+    color:var(--gold);text-transform:uppercase;font-weight:700;margin-bottom:12px;
+  }
+  .featured-label::before{content:"";width:18px;height:1px;background:var(--gold);}
+  .featured-card{
+    position:relative;padding:18px;border-radius:16px;
+    background:
+      radial-gradient(ellipse 300px 160px at 80% 0%, rgba(251,191,36,0.18), transparent 70%),
+      linear-gradient(135deg,#1F1408 0%,#0F0820 100%);
+    border:1px solid rgba(251,191,36,0.22);
+    overflow:hidden;
+  }
+  .featured-card::before{
+    content:"";position:absolute;top:0;left:0;width:3px;height:100%;
+    background:linear-gradient(180deg,var(--gold),var(--violet));
+  }
+  .featured-row1{display:flex;align-items:center;gap:14px;margin-bottom:14px;}
+  .featured-av{
+    width:56px;height:56px;border-radius:16px;flex-shrink:0;
+    background:conic-gradient(from 220deg, #FBBF24, #A855F7, #FBBF24);
+    padding:2px;
+  }
+  .featured-av-inner{
+    width:100%;height:100%;border-radius:14px;
+    background:linear-gradient(135deg,#7C3AED 0%,#1F1408 100%);
+    display:grid;place-items:center;font-weight:700;font-size:20px;color:#fff;letter-spacing:-0.04em;
+  }
+  .featured-info{flex:1;min-width:0;}
+  .featured-name{display:flex;align-items:center;gap:6px;}
+  .featured-name h3{font-size:17px;font-weight:600;letter-spacing:-0.02em;}
+  .featured-handle{font-family:'JetBrains Mono',monospace;font-size:10.5px;color:var(--text-3);margin-top:2px;letter-spacing:0.04em;}
+
+  .featured-stats{
+    display:grid;grid-template-columns:1fr 1fr 1fr;gap:1px;
+    background:rgba(255,255,255,0.06);border-radius:10px;overflow:hidden;margin-bottom:14px;
+  }
+  .featured-stat{padding:10px 11px;background:rgba(0,0,0,0.3);}
+  .featured-stat-l{font-family:'JetBrains Mono',monospace;font-size:8.5px;letter-spacing:0.14em;color:var(--text-3);text-transform:uppercase;}
+  .featured-stat-v{font-family:'Bricolage Grotesque',sans-serif;font-weight:600;font-size:14px;letter-spacing:-0.02em;margin-top:3px;}
+  .featured-stat-v.gold{color:var(--gold);}
+  .featured-stat-v.green{color:var(--green);}
+
+  .featured-cta-row{display:flex;gap:8px;}
+  .btn-primary, .btn-secondary{
+    flex:1;
+    display:flex;align-items:center;justify-content:center;gap:6px;
+    padding:11px 14px;border-radius:11px;
+    font-weight:600;font-size:13px;letter-spacing:-0.005em;
+    cursor:pointer;border:none;
+    font-family:inherit;
+    transition:transform 0.1s ease, opacity 0.15s ease;
+    -webkit-tap-highlight-color:transparent;touch-action:manipulation;
+  }
+  .btn-primary{
+    background:linear-gradient(135deg,#A855F7,#7C3AED);
+    color:#fff;
+    box-shadow:0 8px 24px -8px var(--violet-glow), inset 0 1px 0 rgba(255,255,255,0.18);
+  }
+  .btn-primary:hover{transform:translateY(-1px);}
+  .btn-primary:active{transform:translateY(0);opacity:0.85;}
+  .btn-primary svg{width:14px;height:14px;}
+  .btn-secondary{
+    background:rgba(255,255,255,0.04);
+    color:var(--text);
+    border:1px solid var(--line-2);
+  }
+  .btn-secondary:active{opacity:0.7;}
+  .btn-secondary svg{width:14px;height:14px;color:var(--text-2);}
+
+  .btn-joined{
+    flex:1;
+    display:flex;align-items:center;justify-content:center;gap:6px;
+    padding:11px 14px;border-radius:11px;
+    background:rgba(34,197,94,0.10);
+    color:var(--green);
+    border:1px solid rgba(34,197,94,0.3);
+    font-weight:600;font-size:13px;
+    cursor:default;
+  }
+  .btn-joined svg{width:14px;height:14px;}
+
+  /* clan grid - explore listing */
+  .clan-grid-section{padding:24px 20px 24px;}
+  .clan-grid-head{
+    display:flex;align-items:center;justify-content:space-between;margin-bottom:14px;
+  }
+  .clan-grid-head h3{
+    font-family:'JetBrains Mono',monospace;font-size:11px;color:var(--text-3);
+    letter-spacing:0.18em;text-transform:uppercase;font-weight:700;
+  }
+  .clan-grid-sort{
+    font-family:'JetBrains Mono',monospace;font-size:10px;color:var(--violet);
+    letter-spacing:0.1em;text-transform:uppercase;font-weight:600;cursor:pointer;
+    display:flex;align-items:center;gap:4px;
+  }
+  .clan-grid-sort svg{width:11px;height:11px;}
+
+  .clan-grid{display:flex;flex-direction:column;gap:10px;}
+  .explore-clan-card{
+    padding:14px;border-radius:14px;background:var(--bg-1);
+    border:1px solid var(--line);
+    display:flex;flex-direction:column;gap:12px;
+    cursor:pointer;
+    transition:border-color 0.15s ease;
+  }
+  .explore-clan-card:hover{border-color:var(--line-2);}
+  .ecc-row1{display:flex;align-items:center;gap:12px;}
+  .ecc-av{
+    width:44px;height:44px;border-radius:12px;flex-shrink:0;
+    display:grid;place-items:center;font-weight:700;font-size:16px;color:#fff;letter-spacing:-0.03em;
+    position:relative;
+  }
+  .ecc-av-tier{
+    position:absolute;bottom:-3px;right:-3px;width:18px;height:18px;
+    border-radius:50%;display:grid;place-items:center;border:2px solid #0B0D14;
+    font-size:9px;font-weight:700;
+  }
+  .ecc-av-tier.gold{background:linear-gradient(135deg,#FBBF24,#F59E0B);color:#1a0a00;}
+  .ecc-av-tier.silver{background:linear-gradient(135deg,#E5E7EB,#9CA3AF);color:#1a1a1a;}
+  .ecc-av-tier.bronze{background:linear-gradient(135deg,#D97706,#92400E);color:#fff;}
+  .ecc-info{flex:1;min-width:0;}
+  .ecc-name-row{display:flex;align-items:center;gap:5px;margin-bottom:2px;}
+  .ecc-name{font-size:14px;font-weight:600;letter-spacing:-0.01em;}
+  .ecc-verify{width:11px;height:11px;color:var(--violet);}
+  .ecc-handle{font-family:'JetBrains Mono',monospace;font-size:10px;color:var(--text-3);letter-spacing:0.04em;}
+
+  .ecc-stats{
+    display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;
+    padding:10px 0;border-top:1px solid var(--line);border-bottom:1px solid var(--line);
+  }
+  .ecc-stat{display:flex;flex-direction:column;gap:2px;}
+  .ecc-stat-l{font-family:'JetBrains Mono',monospace;font-size:8px;letter-spacing:0.14em;color:var(--text-3);text-transform:uppercase;}
+  .ecc-stat-v{font-family:'JetBrains Mono',monospace;font-weight:700;font-size:12px;letter-spacing:-0.01em;}
+  .ecc-stat-v.violet{color:var(--violet);}
+  .ecc-stat-v.green{color:var(--green);}
+  .ecc-stat-v.gold{color:var(--gold);}
+
+  .ecc-bottom{display:flex;align-items:center;justify-content:space-between;gap:10px;}
+  .ecc-gate{
+    display:flex;align-items:center;gap:5px;
+    font-family:'JetBrains Mono',monospace;font-size:9.5px;color:var(--text-2);letter-spacing:0.04em;
+  }
+  .ecc-gate svg{width:11px;height:11px;color:var(--violet);}
+  .ecc-gate strong{color:var(--violet);font-weight:600;}
+  .ecc-gate.locked{color:var(--text-3);}
+  .ecc-gate.locked svg{color:var(--text-3);}
+
+  .btn-join{
+    padding:7px 14px;border-radius:8px;
+    background:rgba(168,85,247,0.14);
+    color:var(--violet);
+    border:1px solid rgba(168,85,247,0.3);
+    font-family:'JetBrains Mono',monospace;font-size:10px;font-weight:700;
+    letter-spacing:0.12em;text-transform:uppercase;
+    cursor:pointer;
+    -webkit-tap-highlight-color:transparent;touch-action:manipulation;
+    transition:all 0.15s ease;
+  }
+  .btn-join:hover{background:rgba(168,85,247,0.22);}
+  .btn-join:active{opacity:0.7;}
+  .btn-join.locked{
+    background:rgba(255,255,255,0.04);
+    color:var(--text-3);
+    border-color:var(--line-2);
+    cursor:not-allowed;
+  }
+  .btn-join.joined{
+    background:rgba(34,197,94,0.10);
+    color:var(--green);
+    border-color:rgba(34,197,94,0.3);
+  }
+  .btn-join svg{width:10px;height:10px;display:inline-block;vertical-align:middle;margin-right:3px;}
+
+  /* clan view: header CTA when not joined */
+  .clan-cta-row{
+    display:flex;gap:8px;margin-top:18px;position:relative;
+  }
+  .clan-cta-row .btn-primary, .clan-cta-row .btn-secondary, .clan-cta-row .btn-joined{
+    padding:10px 14px;font-size:12.5px;
+  }
+
+  /* ============ BOTTOM NAV ============ */
+  .nav{
+    position:fixed;bottom:0;left:50%;transform:translateX(-50%);
+    width:100%;max-width:var(--app-max);
+    flex:0 0 auto;display:grid;grid-template-columns:repeat(5,1fr);
+    padding:8px 8px calc(env(safe-area-inset-bottom, 0) + 12px);
+    gap:2px;
+    background:rgba(11,13,20,0.92);
+    backdrop-filter:blur(20px);
+    -webkit-backdrop-filter:blur(20px);
+    border-top:1px solid rgba(255,255,255,0.06);
+    z-index:40;
+  }
+  .nav-item{
+    display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px;
+    padding:9px 2px;border-radius:11px;cursor:pointer;
+    color:var(--text-3);
+    transition:background-color 0.15s ease, color 0.15s ease;
+    border:none;background:transparent;
+    -webkit-tap-highlight-color:transparent;
+    user-select:none;-webkit-user-select:none;
+    touch-action:manipulation;
+    font-family:inherit;
+    position:relative;
+    min-height:48px;
+    text-decoration:none;
+  }
+  .nav-item.on{color:var(--violet);background:rgba(168,85,247,0.08);}
+  .nav-item:active{background:rgba(168,85,247,0.16);}
+  @media(hover:hover){
+    .nav-item:hover{color:var(--violet);}
+  }
+  .nav-item svg{width:19px;height:19px;pointer-events:none;}
+  .nav-item span{font-family:'JetBrains Mono',monospace;font-size:8.5px;font-weight:600;letter-spacing:0.06em;text-transform:uppercase;pointer-events:none;}
+  .nav-item .nav-badge{
+    position:absolute;top:5px;right:25%;width:6px;height:6px;
+    background:var(--red);border-radius:50%;
+    pointer-events:none;
+  }
+
+  /* universal tap feedback for tappable elements */
+  button, .lb-row, .opp-card, .clan-item, .setting-item, .filter-pill, .sec-tab, .topbar-icon{
+    -webkit-tap-highlight-color:transparent;
+    touch-action:manipulation;
+  }
+  .lb-row:active, .opp-card:active, .clan-item:active, .setting-item:active{
+    opacity:0.7;
+  }
+  .filter-pill:active, .sec-tab:active{
+    opacity:0.6;
+  }
+
+</style>
+</head>
+<body>
+
+<div class="app">
+
+  <!-- ============ TOP BAR ============ -->
+  <header class="topbar">
+    <div class="brand">
+      <div class="bolt">
+        <svg viewBox="0 0 24 24" fill="none"><path d="M13 2 4 14h7l-1 8 9-12h-7l1-8z" fill="#fff"/></svg>
+      </div>
+      <div class="brand-name">ZAPS<span> · Clans</span></div>
+    </div>
+    <div class="topbar-right">
+      <div class="topbar-icon">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>
+      </div>
+      <div class="topbar-icon">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg>
+        <span class="badge"></span>
+      </div>
+    </div>
+  </header>
+
+  <!-- ============ MAIN ============ -->
+  <main class="main">
+
+    <!-- ============================================================ -->
+    <!-- VIEW 1: CLAN -->
+    <!-- ============================================================ -->
+    <section class="view active" data-view="clan">
+
+      <div class="clan-hero">
+        <div class="live-pill-row">
+          <div class="live-pill"><span class="pulse-dot"></span> LIVE · 1,247 ONLINE</div>
+        </div>
+
+        <div class="kol-card">
+          <div class="kol-avatar">
+            <div class="kol-avatar-inner">CB</div>
+            <div class="kol-tier">★</div>
+          </div>
+          <div class="kol-info">
+            <div class="kol-name">
+              <h2>Cobie's Pack</h2>
+              <svg class="verify" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2 4 5v6c0 5.55 3.84 10.74 8 12 4.16-1.26 8-6.45 8-12V5l-8-3zm-1 14L7 12l1.41-1.41L11 13.17l4.59-4.58L17 10l-6 6z"/></svg>
+            </div>
+            <div class="kol-handle">@cobie · 421k smart followers</div>
+            <div class="kol-stat-row">
+              <span><strong>2,847</strong> members</span>
+              <span>·</span>
+              <span>Open to <strong>zScore 540+</strong></span>
+            </div>
+          </div>
+        </div>
+
+        <div class="clan-bignum">
+          <div class="bignum-label">Capital Influenced · 24h</div>
+          <div class="bignum-row">
+            <span class="bignum">$<em id="capNum">8.42</em>M</span>
+            <span class="bignum-delta">
+              <svg width="10" height="10" viewBox="0 0 24 24" fill="currentColor"><path d="M7 14l5-5 5 5z"/></svg>
+              +34.2%
+            </span>
+          </div>
+          <div class="bignum-sub">VS PEER MEDIAN · TOP 1.2% OF KOL CLANS</div>
+          <div class="flow-bar"></div>
+        </div>
+
+        <div class="clan-cta-row">
+          <button class="btn-joined">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M20 6 9 17l-5-5"/></svg>
+            Joined · Member #847
+          </button>
+          <button class="btn-secondary" data-go="explore" onclick="return switchView('explore');">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>
+            Explore
+          </button>
+        </div>
+      </div>
+
+      <div class="metric-grid">
+        <div class="metric">
+          <div class="metric-label">Clan Zaps · 24h</div>
+          <div class="metric-value violet">142,891</div>
+        </div>
+        <div class="metric">
+          <div class="metric-label">Avg zScore</div>
+          <div class="metric-value">718</div>
+        </div>
+        <div class="metric">
+          <div class="metric-label">Win Rate</div>
+          <div class="metric-value green">67%</div>
+        </div>
+      </div>
+
+      <div class="sec-head">
+        <h3>
+          <svg viewBox="0 0 24 24" fill="currentColor"><path d="M13 2 4 14h7l-1 8 9-12h-7l1-8z"/></svg>
+          Active Call
+        </h3>
+        <div class="sec-tab-row">
+          <span class="sec-tab on">LIVE</span>
+          <span class="sec-tab">PAST</span>
+        </div>
+      </div>
+
+      <div class="call-card">
+        <div class="call-row1">
+          <div class="call-token">
+            <div class="token-glyph">$F</div>
+            <div class="call-token-info">
+              <div class="call-token-name">$FRACTION</div>
+              <div class="call-token-meta">FRACTION FINANCE · DEFI</div>
+            </div>
+          </div>
+          <div class="call-time">4M AGO</div>
+        </div>
+
+        <div class="call-stats">
+          <div class="call-stat">
+            <span class="call-stat-l">Call Price</span>
+            <span class="call-stat-v">$0.0142</span>
+          </div>
+          <div class="call-stat">
+            <span class="call-stat-l">Now</span>
+            <span class="call-stat-v up">$0.0189 ↗</span>
+          </div>
+          <div class="call-stat">
+            <span class="call-stat-l">Pack PnL</span>
+            <span class="call-stat-v up">+33%</span>
+          </div>
+        </div>
+
+        <div class="call-progress">
+          <span class="call-progress-text"><strong>847</strong> / 2,847 in</span>
+          <div class="call-progress-bar"><div class="call-progress-fill"></div></div>
+        </div>
+
+        <button class="call-cta">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M13 2 4 14h7l-1 8 9-12h-7l1-8z"/></svg>
+          Trade · Earn 2.4× Zaps
+        </button>
+      </div>
+
+      <div class="sec-head">
+        <h3>
+          <svg viewBox="0 0 24 24" fill="currentColor"><path d="M5 3v18h14V3H5zm12 16H7V5h10v14zM9 7h6v2H9V7zm0 4h6v2H9v-2zm0 4h4v2H9v-2z"/></svg>
+          Clan Leaderboard
+        </h3>
+        <div class="sec-tab-row">
+          <span class="sec-tab">7D</span>
+          <span class="sec-tab on">24H</span>
+          <span class="sec-tab">1H</span>
+        </div>
+      </div>
+
+      <div class="lb-list">
+        <div class="lb-row">
+          <div class="lb-rank top1">01<span class="lb-rank-up">↑2</span></div>
+          <div class="lb-user">
+            <div class="lb-avatar" style="background:linear-gradient(135deg,#FBBF24,#F43F5E);">RV</div>
+            <div class="lb-user-info">
+              <div class="lb-user-name">rektventures.eth</div>
+              <div class="lb-user-meta"><span class="lb-zscore">z 891</span> · 4y onchain</div>
+            </div>
+          </div>
+          <div class="lb-zaps-col">
+            <div class="lb-zaps">12,840</div>
+            <div class="lb-cap">$847k cap</div>
+          </div>
+        </div>
+
+        <div class="lb-row">
+          <div class="lb-rank top2">02<span class="lb-rank-up">↑1</span></div>
+          <div class="lb-user">
+            <div class="lb-avatar" style="background:linear-gradient(135deg,#06B6D4,#3B82F6);">0x</div>
+            <div class="lb-user-info">
+              <div class="lb-user-name">0xprincipal</div>
+              <div class="lb-user-meta"><span class="lb-zscore">z 824</span> · 2.8y onchain</div>
+            </div>
+          </div>
+          <div class="lb-zaps-col">
+            <div class="lb-zaps">11,204</div>
+            <div class="lb-cap">$612k cap</div>
+          </div>
+        </div>
+
+        <div class="lb-row">
+          <div class="lb-rank top3">03<span class="lb-rank-down">↓2</span></div>
+          <div class="lb-user">
+            <div class="lb-avatar" style="background:linear-gradient(135deg,#A855F7,#EC4899);">SB</div>
+            <div class="lb-user-info">
+              <div class="lb-user-name">sushibender.lens</div>
+              <div class="lb-user-meta"><span class="lb-zscore">z 779</span> · 3.1y onchain</div>
+            </div>
+          </div>
+          <div class="lb-zaps-col">
+            <div class="lb-zaps">9,876</div>
+            <div class="lb-cap">$524k cap</div>
+          </div>
+        </div>
+
+        <div class="lb-row">
+          <div class="lb-rank">04<span class="lb-rank-up">↑3</span></div>
+          <div class="lb-user">
+            <div class="lb-avatar" style="background:linear-gradient(135deg,#10B981,#A855F7);">VK</div>
+            <div class="lb-user-info">
+              <div class="lb-user-name">valkyrian</div>
+              <div class="lb-user-meta"><span class="lb-zscore">z 762</span> · 2.1y onchain</div>
+            </div>
+          </div>
+          <div class="lb-zaps-col">
+            <div class="lb-zaps">8,521</div>
+            <div class="lb-cap">$398k cap</div>
+          </div>
+        </div>
+
+        <div class="lb-row">
+          <div class="lb-rank">05<span class="lb-rank-down">↓1</span></div>
+          <div class="lb-user">
+            <div class="lb-avatar" style="background:linear-gradient(135deg,#F43F5E,#7C3AED);">DG</div>
+            <div class="lb-user-info">
+              <div class="lb-user-name">degenerate.eth</div>
+              <div class="lb-user-meta"><span class="lb-zscore">z 745</span> · 3.4y onchain</div>
+            </div>
+          </div>
+          <div class="lb-zaps-col">
+            <div class="lb-zaps">7,894</div>
+            <div class="lb-cap">$341k cap</div>
+          </div>
+        </div>
+
+        <div class="lb-row">
+          <div class="lb-rank">06</div>
+          <div class="lb-user">
+            <div class="lb-avatar" style="background:linear-gradient(135deg,#FBBF24,#10B981);">PT</div>
+            <div class="lb-user-info">
+              <div class="lb-user-name">protein.eth</div>
+              <div class="lb-user-meta"><span class="lb-zscore">z 728</span> · 1.8y onchain</div>
+            </div>
+          </div>
+          <div class="lb-zaps-col">
+            <div class="lb-zaps">7,102</div>
+            <div class="lb-cap">$306k cap</div>
+          </div>
+        </div>
+
+        <div class="lb-row you">
+          <div class="lb-rank">07<span class="lb-rank-up">↑4</span></div>
+          <div class="lb-user">
+            <div class="lb-avatar" style="background:linear-gradient(135deg,#7C3AED,#A855F7);">AJ</div>
+            <div class="lb-user-info">
+              <div class="lb-user-name">ajay.eth</div>
+              <div class="lb-user-meta"><span class="lb-zscore">z 712</span> · 22d streak 🔥</div>
+            </div>
+          </div>
+          <div class="lb-zaps-col">
+            <div class="lb-zaps">6,412</div>
+            <div class="lb-cap">$284k cap</div>
+          </div>
+        </div>
+
+        <div class="lb-row">
+          <div class="lb-rank">08<span class="lb-rank-down">↓1</span></div>
+          <div class="lb-user">
+            <div class="lb-avatar" style="background:linear-gradient(135deg,#10B981,#06B6D4);">FD</div>
+            <div class="lb-user-info">
+              <div class="lb-user-name">freshdumper</div>
+              <div class="lb-user-meta"><span class="lb-zscore">z 698</span> · 1.4y onchain</div>
+            </div>
+          </div>
+          <div class="lb-zaps-col">
+            <div class="lb-zaps">5,891</div>
+            <div class="lb-cap">$241k cap</div>
+          </div>
+        </div>
+
+        <div class="lb-row">
+          <div class="lb-rank">09</div>
+          <div class="lb-user">
+            <div class="lb-avatar" style="background:linear-gradient(135deg,#F43F5E,#FBBF24);">MK</div>
+            <div class="lb-user-info">
+              <div class="lb-user-name">mochiking.eth</div>
+              <div class="lb-user-meta"><span class="lb-zscore">z 641</span> · 8mo onchain</div>
+            </div>
+          </div>
+          <div class="lb-zaps-col">
+            <div class="lb-zaps">5,103</div>
+            <div class="lb-cap">$198k cap</div>
+          </div>
+        </div>
+
+        <div class="lb-row">
+          <div class="lb-rank">10<span class="lb-rank-up">↑2</span></div>
+          <div class="lb-user">
+            <div class="lb-avatar" style="background:linear-gradient(135deg,#06B6D4,#A855F7);">NX</div>
+            <div class="lb-user-info">
+              <div class="lb-user-name">nexus.eth</div>
+              <div class="lb-user-meta"><span class="lb-zscore">z 632</span> · 1.9y onchain</div>
+            </div>
+          </div>
+          <div class="lb-zaps-col">
+            <div class="lb-zaps">4,724</div>
+            <div class="lb-cap">$172k cap</div>
+          </div>
+        </div>
+      </div>
+
+    </section>
+
+    <!-- ============================================================ -->
+    <!-- VIEW 2: EARN -->
+    <!-- ============================================================ -->
+    <section class="view" data-view="dash">
+
+      <div class="dash-hero">
+        <div class="dash-greeting">Wed · April 30 · 9:41</div>
+        <div class="dash-name">gm, <span>ajay</span></div>
+
+        <div class="dash-zaps-card">
+          <div class="zaps-label">
+            <span class="zaps-bolt"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M13 2 4 14h7l-1 8 9-12h-7l1-8z"/></svg></span>
+            Total Zaps · This Period
+          </div>
+          <div class="zaps-num"><span id="zapsNum">14,238</span></div>
+          <div class="zaps-equiv">≈ <strong>$284</strong> at last campaign rate · <span class="plus">+862</span> overnight</div>
+
+          <div class="zaps-split">
+            <div class="zaps-split-item">
+              <div class="zaps-split-l">Onchain activity</div>
+              <div class="zaps-split-v">8,104</div>
+            </div>
+            <div class="zaps-split-item">
+              <div class="zaps-split-l">Clan boost</div>
+              <div class="zaps-split-v" style="color:var(--violet);">+6,134</div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="streak-row">
+        <div class="streak-flame">🔥</div>
+        <div class="streak-info">
+          <div class="streak-num"><strong>22-day</strong> streak · 1.35× multiplier</div>
+          <div class="streak-mult">Active this week · breaks tomorrow if no onchain action</div>
+          <div class="streak-warn">14h until streak resets · would lose ~$94/mo</div>
+        </div>
+      </div>
+
+      <div class="gap-card">
+        <div class="gap-head">
+          <div>
+            <div class="gap-tier-from">Current Tier</div>
+            <div class="gap-tier-cur">Operator</div>
+          </div>
+          <div class="gap-tier-arrow">→</div>
+          <div class="gap-tier-to">
+            <div class="gap-tier-next">Next Tier</div>
+            <div class="gap-tier-tname">Proven</div>
+          </div>
+        </div>
+
+        <div class="gap-line">
+          <span class="gap-line-l">YOUR PERIOD</span>
+          <span class="gap-line-v">14,238 ZAPS</span>
+        </div>
+        <div class="gap-line">
+          <span class="gap-line-l">AT PROVEN</span>
+          <span class="gap-line-v" style="color:var(--violet);">19,210 ZAPS</span>
+        </div>
+
+        <div class="gap-delta">
+          <div class="gap-delta-l">You're leaving on the table</div>
+          <div class="gap-delta-v">$<em>99</em>.40<span style="font-size:14px;color:var(--text-2);"> /period</span></div>
+          <div class="gap-delta-sub">≈ $1,193 over 12 periods</div>
+        </div>
+
+        <div class="gap-action">
+          <strong>To reach Proven:</strong> hold 50th-percentile Zaps for 22 more days OR push zScore from 712 → 745. You're 4 percentile points away.
+        </div>
+      </div>
+
+      <div class="sec-head" style="padding-top:8px;">
+        <h3>
+          <svg viewBox="0 0 24 24" fill="currentColor"><circle cx="12" cy="12" r="10" fill="none" stroke="currentColor" stroke-width="2"/><path d="M12 6v6l4 2" stroke="currentColor" stroke-width="2" fill="none"/></svg>
+          Earning Now
+        </h3>
+        <div class="sec-tab-row">
+          <span class="sec-tab on">FOR YOU</span>
+          <span class="sec-tab">ALL</span>
+        </div>
+      </div>
+
+      <div class="opp-list">
+        <div class="opp-card urgent">
+          <div class="opp-icon red">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M12 9v4M12 17h.01M21 12a9 9 0 1 1-18 0 9 9 0 0 1 18 0z"/></svg>
+          </div>
+          <div class="opp-body">
+            <div class="opp-title">Streak breaks in 14h</div>
+            <div class="opp-sub">Any onchain action saves your 1.35× multiplier</div>
+          </div>
+          <div class="opp-reward red">
+            −$94<small>at risk</small>
+          </div>
+        </div>
+
+        <div class="opp-card">
+          <div class="opp-icon violet">
+            <svg viewBox="0 0 24 24" fill="currentColor"><path d="M13 2 4 14h7l-1 8 9-12h-7l1-8z"/></svg>
+          </div>
+          <div class="opp-body">
+            <div class="opp-title">Aerodrome · sticky LP campaign</div>
+            <div class="opp-sub">3 days left · matches your activity profile</div>
+          </div>
+          <div class="opp-reward">
+            +2,400<small>zaps</small>
+          </div>
+        </div>
+
+        <div class="opp-card">
+          <div class="opp-icon gold">
+            <svg viewBox="0 0 24 24" fill="currentColor"><path d="M5 16l-2-12 5.5 4L12 2l3.5 6L21 4l-2 12H5zm0 2h14v2H5v-2z"/></svg>
+          </div>
+          <div class="opp-body">
+            <div class="opp-title">Join Tetranode's Pack</div>
+            <div class="opp-sub">Auto-unlocks at zScore 745 · 2 active campaigns match</div>
+          </div>
+          <div class="opp-reward">
+            +500<small>/mo est.</small>
+          </div>
+        </div>
+
+        <div class="opp-card">
+          <div class="opp-icon violet">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><path d="m22 4-10 10.01-3-3"/></svg>
+          </div>
+          <div class="opp-body">
+            <div class="opp-title">Refer a wallet to Cobie's Pack</div>
+            <div class="opp-sub">10% of their campaign Zaps for 90 days</div>
+          </div>
+          <div class="opp-reward">
+            10%<small>per ref</small>
+          </div>
+        </div>
+
+        <div class="opp-card">
+          <div class="opp-icon violet">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/></svg>
+          </div>
+          <div class="opp-body">
+            <div class="opp-title">Morpho · borrow & hold</div>
+            <div class="opp-sub">7 days left · earn while you borrow</div>
+          </div>
+          <div class="opp-reward">
+            +1,800<small>zaps</small>
+          </div>
+        </div>
+      </div>
+
+    </section>
+
+    <!-- ============================================================ -->
+    <!-- VIEW 3: TAPE -->
+    <!-- ============================================================ -->
+    <section class="view" data-view="tape">
+
+      <div class="tape-hero">
+        <div class="tape-title">
+          <div class="live-pill"><span class="pulse-dot"></span> LIVE</div>
+          <h2>Capital Tape</h2>
+        </div>
+        <div class="tape-stats">
+          <span><strong>247</strong> calls · <em>↑34</em></span>
+          <span><strong>$12.4M</strong> influenced · 1h</span>
+          <span>14 chains</span>
+        </div>
+      </div>
+
+      <div class="tape-filters">
+        <span class="filter-pill on">ALL CALLS</span>
+        <span class="filter-pill">YOUR PACKS</span>
+        <span class="filter-pill">BIG MOVES</span>
+        <span class="filter-pill">$50K+</span>
+        <span class="filter-pill">FRESH ALPHA</span>
+      </div>
+
+      <div class="tape-list">
+
+        <div class="tick flash">
+          <div class="tick-time now">NOW</div>
+          <div class="tick-body">
+            <div class="tick-line1">
+              <div class="tick-kol">
+                <div class="tick-kol-av" style="background:linear-gradient(135deg,#A855F7,#7C3AED);">CB</div>
+                <span class="tick-kol-name">cobie</span>
+              </div>
+              <span class="tick-action call">CALLED</span>
+            </div>
+            <div class="tick-detail">Long <span class="ticker">$FRACTION</span> · entry <b>$0.0142</b> · "real revenue, undercovered"</div>
+            <div class="tick-meta">
+              <span><strong>847</strong> in pack</span>
+              <span><strong>$284k</strong> deployed · 4m</span>
+            </div>
+          </div>
+          <div class="tick-zaps">+12k<small>pool</small></div>
+        </div>
+
+        <div class="tick">
+          <div class="tick-time">2m</div>
+          <div class="tick-body">
+            <div class="tick-line1">
+              <div class="tick-kol">
+                <div class="tick-kol-av" style="background:linear-gradient(135deg,#06B6D4,#3B82F6);">TN</div>
+                <span class="tick-kol-name">tetranode</span>
+              </div>
+              <span class="tick-action lp">ADDED LP</span>
+            </div>
+            <div class="tick-detail"><b>$420k</b> into <span class="ticker">cbBTC/USDC</span> on Aerodrome · 7d lock</div>
+            <div class="tick-meta">
+              <span><strong>112</strong> followed</span>
+              <span><strong>$1.8M</strong> total flow · 38m</span>
+            </div>
+          </div>
+          <div class="tick-zaps">+4.2k<small>pool</small></div>
+        </div>
+
+        <div class="tick">
+          <div class="tick-time">7m</div>
+          <div class="tick-body">
+            <div class="tick-line1">
+              <div class="tick-kol">
+                <div class="tick-kol-av" style="background:linear-gradient(135deg,#FBBF24,#F43F5E);">RV</div>
+                <span class="tick-kol-name">rektventures</span>
+              </div>
+              <span class="tick-action exit">EXITED</span>
+            </div>
+            <div class="tick-detail">Closed <span class="ticker">$ZORA</span> from 0.42 → <b>0.58</b> · +38% · 9d hold</div>
+            <div class="tick-meta">
+              <span><strong>91</strong> riding</span>
+              <span><strong>$612k</strong> realized · pack PnL <em style="color:var(--green);font-style:normal;">+34%</em></span>
+            </div>
+          </div>
+          <div class="tick-zaps" style="color:var(--green);">+8.4k<small>realized</small></div>
+        </div>
+
+        <div class="tick">
+          <div class="tick-time">11m</div>
+          <div class="tick-body">
+            <div class="tick-line1">
+              <div class="tick-kol">
+                <div class="tick-kol-av" style="background:linear-gradient(135deg,#10B981,#06B6D4);">DE</div>
+                <span class="tick-kol-name">degen.eth</span>
+              </div>
+              <span class="tick-action buy">BOUGHT</span>
+            </div>
+            <div class="tick-detail"><b>$87k</b> of <span class="ticker">$VIRTUAL</span> · "AI agents thesis still alive"</div>
+            <div class="tick-meta">
+              <span><strong>48</strong> followed</span>
+              <span><strong>$214k</strong> flow</span>
+            </div>
+          </div>
+          <div class="tick-zaps">+2.1k<small>pool</small></div>
+        </div>
+
+        <div class="tick">
+          <div class="tick-time">18m</div>
+          <div class="tick-body">
+            <div class="tick-line1">
+              <div class="tick-kol">
+                <div class="tick-kol-av" style="background:linear-gradient(135deg,#A855F7,#EC4899);">SB</div>
+                <span class="tick-kol-name">sushibender</span>
+              </div>
+              <span class="tick-action call">CALLED</span>
+            </div>
+            <div class="tick-detail">Short <span class="ticker">$DOGEAI</span> · "rotation top, distribution heavy"</div>
+            <div class="tick-meta">
+              <span><strong>34</strong> in pack</span>
+              <span><strong>$74k</strong> deployed</span>
+            </div>
+          </div>
+          <div class="tick-zaps">+1.8k<small>pool</small></div>
+        </div>
+
+        <div class="tick">
+          <div class="tick-time">24m</div>
+          <div class="tick-body">
+            <div class="tick-line1">
+              <div class="tick-kol">
+                <div class="tick-kol-av" style="background:linear-gradient(135deg,#7C3AED,#06B6D4);">HL</div>
+                <span class="tick-kol-name">hashlord</span>
+              </div>
+              <span class="tick-action buy">BOUGHT</span>
+            </div>
+            <div class="tick-detail"><b>$145k</b> of <span class="ticker">$AERO</span> · staked 4yr · "max conviction"</div>
+            <div class="tick-meta">
+              <span><strong>67</strong> followed</span>
+              <span><strong>$489k</strong> flow</span>
+            </div>
+          </div>
+          <div class="tick-zaps">+3.4k<small>pool</small></div>
+        </div>
+
+        <div class="tick">
+          <div class="tick-time">31m</div>
+          <div class="tick-body">
+            <div class="tick-line1">
+              <div class="tick-kol">
+                <div class="tick-kol-av" style="background:linear-gradient(135deg,#F43F5E,#FBBF24);">MK</div>
+                <span class="tick-kol-name">mochiking</span>
+              </div>
+              <span class="tick-action call">CALLED</span>
+            </div>
+            <div class="tick-detail">Long <span class="ticker">$MORPHO</span> · "lending rotation, undercovered"</div>
+            <div class="tick-meta">
+              <span><strong>22</strong> in pack</span>
+              <span><strong>$48k</strong> deployed</span>
+            </div>
+          </div>
+          <div class="tick-zaps">+1.1k<small>pool</small></div>
+        </div>
+
+        <div class="tick">
+          <div class="tick-time">42m</div>
+          <div class="tick-body">
+            <div class="tick-line1">
+              <div class="tick-kol">
+                <div class="tick-kol-av" style="background:linear-gradient(135deg,#FBBF24,#10B981);">PT</div>
+                <span class="tick-kol-name">protein.eth</span>
+              </div>
+              <span class="tick-action lp">ADDED LP</span>
+            </div>
+            <div class="tick-detail"><b>$92k</b> into <span class="ticker">ETH/USDC</span> on Uniswap · concentrated range</div>
+            <div class="tick-meta">
+              <span><strong>28</strong> followed</span>
+              <span><strong>$214k</strong> flow</span>
+            </div>
+          </div>
+          <div class="tick-zaps">+1.6k<small>pool</small></div>
+        </div>
+
+        <div class="tick">
+          <div class="tick-time">58m</div>
+          <div class="tick-body">
+            <div class="tick-line1">
+              <div class="tick-kol">
+                <div class="tick-kol-av" style="background:linear-gradient(135deg,#06B6D4,#A855F7);">NX</div>
+                <span class="tick-kol-name">nexus.eth</span>
+              </div>
+              <span class="tick-action exit">EXITED</span>
+            </div>
+            <div class="tick-detail">Trimmed <span class="ticker">$PEPE</span> · −18% · "thesis broken, rotation done"</div>
+            <div class="tick-meta">
+              <span><strong>41</strong> riding</span>
+              <span><strong>$184k</strong> realized · pack PnL <em style="color:var(--red);font-style:normal;">−14%</em></span>
+            </div>
+          </div>
+          <div class="tick-zaps" style="color:var(--red);">−1.2k<small>realized</small></div>
+        </div>
+
+      </div>
+
+    </section>
+
+    <!-- ============================================================ -->
+    <!-- VIEW: EXPLORE -->
+    <!-- ============================================================ -->
+    <section class="view" data-view="explore">
+
+      <div class="explore-hero">
+        <div class="explore-title">
+          <h2>Explore Clans</h2>
+          <div class="explore-title-meta"><strong>1,284</strong> active · <strong>24,891</strong> members</div>
+        </div>
+        <div class="search-bar">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>
+          <input type="text" placeholder="Search KOLs, ENS, ticker, theme..." />
+        </div>
+      </div>
+
+      <div class="explore-filters">
+        <span class="filter-pill on">ALL</span>
+        <span class="filter-pill">FOR YOU</span>
+        <span class="filter-pill">HOT 24H</span>
+        <span class="filter-pill">DEFI</span>
+        <span class="filter-pill">MEMES</span>
+        <span class="filter-pill">AI</span>
+        <span class="filter-pill">PERPS</span>
+        <span class="filter-pill">NEW</span>
+      </div>
+
+      <div class="featured-section">
+        <div class="featured-label">⚡ Featured · top mover this week</div>
+        <div class="featured-card">
+          <div class="featured-row1">
+            <div class="featured-av">
+              <div class="featured-av-inner">VK</div>
+            </div>
+            <div class="featured-info">
+              <div class="featured-name">
+                <h3>Valkyrian's Vault</h3>
+                <svg class="verify" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2 4 5v6c0 5.55 3.84 10.74 8 12 4.16-1.26 8-6.45 8-12V5l-8-3zm-1 14L7 12l1.41-1.41L11 13.17l4.59-4.58L17 10l-6 6z"/></svg>
+              </div>
+              <div class="featured-handle">@valkyrian · 184k smart followers</div>
+            </div>
+          </div>
+
+          <div class="featured-stats">
+            <div class="featured-stat">
+              <div class="featured-stat-l">7d Cap</div>
+              <div class="featured-stat-v gold">$24.1M</div>
+            </div>
+            <div class="featured-stat">
+              <div class="featured-stat-l">Win Rate</div>
+              <div class="featured-stat-v green">74%</div>
+            </div>
+            <div class="featured-stat">
+              <div class="featured-stat-l">Members</div>
+              <div class="featured-stat-v">1,892</div>
+            </div>
+          </div>
+
+          <div class="featured-cta-row">
+            <button class="btn-primary" data-action="join" data-clan="valkyrian" onclick="return toggleJoin(this);">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M12 5v14M5 12h14"/></svg>
+              Join · Free for zScore 600+
+            </button>
+            <button class="btn-secondary">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M2 12s3-7 10-7 10 7 10 7-3 7-10 7-10-7-10-7Z"/></svg>
+              Preview
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <div class="clan-grid-section">
+        <div class="clan-grid-head">
+          <h3>All Clans</h3>
+          <div class="clan-grid-sort">
+            7d Capital
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4"><path d="m6 9 6 6 6-6"/></svg>
+          </div>
+        </div>
+
+        <div class="clan-grid">
+
+          <!-- Cobie's Pack - already joined -->
+          <div class="explore-clan-card">
+            <div class="ecc-row1">
+              <div class="ecc-av" style="background:linear-gradient(135deg,#7C3AED,#1A0F2E);">
+                CB
+                <div class="ecc-av-tier gold">★</div>
+              </div>
+              <div class="ecc-info">
+                <div class="ecc-name-row">
+                  <span class="ecc-name">Cobie's Pack</span>
+                  <svg class="ecc-verify" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2 4 5v6c0 5.55 3.84 10.74 8 12 4.16-1.26 8-6.45 8-12V5l-8-3zm-1 14L7 12l1.41-1.41L11 13.17l4.59-4.58L17 10l-6 6z"/></svg>
+                </div>
+                <div class="ecc-handle">@cobie · 421k followers</div>
+              </div>
+            </div>
+            <div class="ecc-stats">
+              <div class="ecc-stat"><div class="ecc-stat-l">7d Cap</div><div class="ecc-stat-v gold">$58.2M</div></div>
+              <div class="ecc-stat"><div class="ecc-stat-l">Members</div><div class="ecc-stat-v">2,847</div></div>
+              <div class="ecc-stat"><div class="ecc-stat-l">Win</div><div class="ecc-stat-v green">67%</div></div>
+            </div>
+            <div class="ecc-bottom">
+              <div class="ecc-gate">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4"><circle cx="12" cy="12" r="10"/><path d="m9 12 2 2 4-4"/></svg>
+                <strong>z 540+</strong> · you qualify
+              </div>
+              <button class="btn-join joined" disabled>✓ Joined</button>
+            </div>
+          </div>
+
+          <!-- Tetranode - already joined -->
+          <div class="explore-clan-card">
+            <div class="ecc-row1">
+              <div class="ecc-av" style="background:linear-gradient(135deg,#06B6D4,#3B82F6);">
+                TN
+                <div class="ecc-av-tier silver">★</div>
+              </div>
+              <div class="ecc-info">
+                <div class="ecc-name-row">
+                  <span class="ecc-name">Tetranode Group</span>
+                  <svg class="ecc-verify" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2 4 5v6c0 5.55 3.84 10.74 8 12 4.16-1.26 8-6.45 8-12V5l-8-3zm-1 14L7 12l1.41-1.41L11 13.17l4.59-4.58L17 10l-6 6z"/></svg>
+                </div>
+                <div class="ecc-handle">@tetranode · 287k followers</div>
+              </div>
+            </div>
+            <div class="ecc-stats">
+              <div class="ecc-stat"><div class="ecc-stat-l">7d Cap</div><div class="ecc-stat-v gold">$31.4M</div></div>
+              <div class="ecc-stat"><div class="ecc-stat-l">Members</div><div class="ecc-stat-v">1,204</div></div>
+              <div class="ecc-stat"><div class="ecc-stat-l">Win</div><div class="ecc-stat-v green">71%</div></div>
+            </div>
+            <div class="ecc-bottom">
+              <div class="ecc-gate">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4"><circle cx="12" cy="12" r="10"/><path d="m9 12 2 2 4-4"/></svg>
+                <strong>z 600+</strong> · you qualify
+              </div>
+              <button class="btn-join joined" disabled>✓ Joined</button>
+            </div>
+          </div>
+
+          <!-- Ansem -->
+          <div class="explore-clan-card">
+            <div class="ecc-row1">
+              <div class="ecc-av" style="background:linear-gradient(135deg,#F43F5E,#FBBF24);">
+                AN
+                <div class="ecc-av-tier gold">★</div>
+              </div>
+              <div class="ecc-info">
+                <div class="ecc-name-row">
+                  <span class="ecc-name">Ansem Trenches</span>
+                  <svg class="ecc-verify" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2 4 5v6c0 5.55 3.84 10.74 8 12 4.16-1.26 8-6.45 8-12V5l-8-3zm-1 14L7 12l1.41-1.41L11 13.17l4.59-4.58L17 10l-6 6z"/></svg>
+                </div>
+                <div class="ecc-handle">@blknoiz06 · 312k followers</div>
+              </div>
+            </div>
+            <div class="ecc-stats">
+              <div class="ecc-stat"><div class="ecc-stat-l">7d Cap</div><div class="ecc-stat-v gold">$28.7M</div></div>
+              <div class="ecc-stat"><div class="ecc-stat-l">Members</div><div class="ecc-stat-v">1,547</div></div>
+              <div class="ecc-stat"><div class="ecc-stat-l">Win</div><div class="ecc-stat-v green">62%</div></div>
+            </div>
+            <div class="ecc-bottom">
+              <div class="ecc-gate">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4"><circle cx="12" cy="12" r="10"/><path d="m9 12 2 2 4-4"/></svg>
+                <strong>z 580+</strong> · you qualify
+              </div>
+              <button class="btn-join" data-action="join" data-clan="ansem" onclick="return toggleJoin(this);">+ Join</button>
+            </div>
+          </div>
+
+          <!-- Hashlord -->
+          <div class="explore-clan-card">
+            <div class="ecc-row1">
+              <div class="ecc-av" style="background:linear-gradient(135deg,#7C3AED,#06B6D4);">
+                HL
+                <div class="ecc-av-tier silver">★</div>
+              </div>
+              <div class="ecc-info">
+                <div class="ecc-name-row">
+                  <span class="ecc-name">Hashlord's Order</span>
+                </div>
+                <div class="ecc-handle">@hashlord · 142k followers</div>
+              </div>
+            </div>
+            <div class="ecc-stats">
+              <div class="ecc-stat"><div class="ecc-stat-l">7d Cap</div><div class="ecc-stat-v">$18.9M</div></div>
+              <div class="ecc-stat"><div class="ecc-stat-l">Members</div><div class="ecc-stat-v">894</div></div>
+              <div class="ecc-stat"><div class="ecc-stat-l">Win</div><div class="ecc-stat-v green">69%</div></div>
+            </div>
+            <div class="ecc-bottom">
+              <div class="ecc-gate">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4"><circle cx="12" cy="12" r="10"/><path d="m9 12 2 2 4-4"/></svg>
+                <strong>z 650+</strong> · you qualify
+              </div>
+              <button class="btn-join" data-action="join" data-clan="hashlord" onclick="return toggleJoin(this);">+ Join</button>
+            </div>
+          </div>
+
+          <!-- Locked clan -->
+          <div class="explore-clan-card">
+            <div class="ecc-row1">
+              <div class="ecc-av" style="background:linear-gradient(135deg,#FBBF24,#10B981);">
+                PC
+                <div class="ecc-av-tier gold">★</div>
+              </div>
+              <div class="ecc-info">
+                <div class="ecc-name-row">
+                  <span class="ecc-name">Pentoshi's Circle</span>
+                  <svg class="ecc-verify" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2 4 5v6c0 5.55 3.84 10.74 8 12 4.16-1.26 8-6.45 8-12V5l-8-3zm-1 14L7 12l1.41-1.41L11 13.17l4.59-4.58L17 10l-6 6z"/></svg>
+                </div>
+                <div class="ecc-handle">@pentosh1 · 624k followers</div>
+              </div>
+            </div>
+            <div class="ecc-stats">
+              <div class="ecc-stat"><div class="ecc-stat-l">7d Cap</div><div class="ecc-stat-v gold">$42.6M</div></div>
+              <div class="ecc-stat"><div class="ecc-stat-l">Members</div><div class="ecc-stat-v">512</div></div>
+              <div class="ecc-stat"><div class="ecc-stat-l">Win</div><div class="ecc-stat-v green">78%</div></div>
+            </div>
+            <div class="ecc-bottom">
+              <div class="ecc-gate locked">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4"><rect x="4" y="11" width="16" height="10" rx="2"/><path d="M8 11V7a4 4 0 0 1 8 0v4"/></svg>
+                z 800+ · need <strong style="color:var(--gold);">+88</strong>
+              </div>
+              <button class="btn-join locked" disabled>Locked</button>
+            </div>
+          </div>
+
+          <!-- DegenSpartan -->
+          <div class="explore-clan-card">
+            <div class="ecc-row1">
+              <div class="ecc-av" style="background:linear-gradient(135deg,#10B981,#A855F7);">
+                DS
+                <div class="ecc-av-tier silver">★</div>
+              </div>
+              <div class="ecc-info">
+                <div class="ecc-name-row">
+                  <span class="ecc-name">Degen Spartans</span>
+                </div>
+                <div class="ecc-handle">@degenspartan · 98k followers</div>
+              </div>
+            </div>
+            <div class="ecc-stats">
+              <div class="ecc-stat"><div class="ecc-stat-l">7d Cap</div><div class="ecc-stat-v">$14.2M</div></div>
+              <div class="ecc-stat"><div class="ecc-stat-l">Members</div><div class="ecc-stat-v">2,104</div></div>
+              <div class="ecc-stat"><div class="ecc-stat-l">Win</div><div class="ecc-stat-v green">58%</div></div>
+            </div>
+            <div class="ecc-bottom">
+              <div class="ecc-gate">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4"><circle cx="12" cy="12" r="10"/><path d="m9 12 2 2 4-4"/></svg>
+                <strong>z 480+</strong> · you qualify
+              </div>
+              <button class="btn-join" data-action="join" data-clan="degenspartan" onclick="return toggleJoin(this);">+ Join</button>
+            </div>
+          </div>
+
+          <!-- Locked: Top tier -->
+          <div class="explore-clan-card">
+            <div class="ecc-row1">
+              <div class="ecc-av" style="background:linear-gradient(135deg,#5B21B6,#EC4899);">
+                GC
+                <div class="ecc-av-tier gold">★</div>
+              </div>
+              <div class="ecc-info">
+                <div class="ecc-name-row">
+                  <span class="ecc-name">Gigantic Capital</span>
+                  <svg class="ecc-verify" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2 4 5v6c0 5.55 3.84 10.74 8 12 4.16-1.26 8-6.45 8-12V5l-8-3zm-1 14L7 12l1.41-1.41L11 13.17l4.59-4.58L17 10l-6 6z"/></svg>
+                </div>
+                <div class="ecc-handle">@gigacapital · invitation only</div>
+              </div>
+            </div>
+            <div class="ecc-stats">
+              <div class="ecc-stat"><div class="ecc-stat-l">7d Cap</div><div class="ecc-stat-v gold">$112M</div></div>
+              <div class="ecc-stat"><div class="ecc-stat-l">Members</div><div class="ecc-stat-v">94</div></div>
+              <div class="ecc-stat"><div class="ecc-stat-l">Win</div><div class="ecc-stat-v green">82%</div></div>
+            </div>
+            <div class="ecc-bottom">
+              <div class="ecc-gate locked">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4"><rect x="4" y="11" width="16" height="10" rx="2"/><path d="M8 11V7a4 4 0 0 1 8 0v4"/></svg>
+                Invite only · z 900+
+              </div>
+              <button class="btn-join locked" disabled>Request</button>
+            </div>
+          </div>
+
+          <!-- New clan -->
+          <div class="explore-clan-card">
+            <div class="ecc-row1">
+              <div class="ecc-av" style="background:linear-gradient(135deg,#06B6D4,#A855F7);">
+                NX
+                <div class="ecc-av-tier bronze">★</div>
+              </div>
+              <div class="ecc-info">
+                <div class="ecc-name-row">
+                  <span class="ecc-name">Nexus Reborn</span>
+                </div>
+                <div class="ecc-handle">@nexus · 22k followers · NEW</div>
+              </div>
+            </div>
+            <div class="ecc-stats">
+              <div class="ecc-stat"><div class="ecc-stat-l">7d Cap</div><div class="ecc-stat-v">$2.8M</div></div>
+              <div class="ecc-stat"><div class="ecc-stat-l">Members</div><div class="ecc-stat-v">194</div></div>
+              <div class="ecc-stat"><div class="ecc-stat-l">Win</div><div class="ecc-stat-v">—</div></div>
+            </div>
+            <div class="ecc-bottom">
+              <div class="ecc-gate">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4"><circle cx="12" cy="12" r="10"/><path d="m9 12 2 2 4-4"/></svg>
+                <strong>Open</strong> · no zScore floor
+              </div>
+              <button class="btn-join" data-action="join" data-clan="nexus" onclick="return toggleJoin(this);">+ Join</button>
+            </div>
+          </div>
+
+        </div>
+      </div>
+
+    </section>
+
+    <!-- ============================================================ -->
+    <!-- VIEW 4: PROFILE -->
+    <!-- ============================================================ -->
+    <section class="view" data-view="profile">
+
+      <div class="profile-hero">
+        <div class="profile-avatar">
+          <div class="profile-avatar-inner">AJ</div>
+        </div>
+        <div class="profile-name">ajay.eth</div>
+        <div class="profile-handle">0x84a3...c92f · 2.4y onchain</div>
+        <div class="profile-tier">★ Operator · zScore 712</div>
+      </div>
+
+      <div class="profile-stats">
+        <div class="profile-stat">
+          <div class="profile-stat-l">Total Zaps</div>
+          <div class="profile-stat-v violet">142,891</div>
+        </div>
+        <div class="profile-stat">
+          <div class="profile-stat-l">Cap Influenced</div>
+          <div class="profile-stat-v">$1.2M</div>
+        </div>
+        <div class="profile-stat">
+          <div class="profile-stat-l">Streak</div>
+          <div class="profile-stat-v" style="color:var(--gold);">22d 🔥</div>
+        </div>
+      </div>
+
+      <div class="profile-section">
+        <h3>Your Clans</h3>
+        <div class="my-clans">
+          <div class="clan-item">
+            <div class="clan-item-av" style="background:linear-gradient(135deg,#7C3AED,#1A0F2E);">CB</div>
+            <div class="clan-item-info">
+              <div class="clan-item-name">Cobie's Pack</div>
+              <div class="clan-item-meta">2,847 members · 24h cap $8.4M</div>
+            </div>
+            <div class="clan-item-rank">
+              #07
+              <small>your rank</small>
+            </div>
+          </div>
+
+          <div class="clan-item">
+            <div class="clan-item-av" style="background:linear-gradient(135deg,#06B6D4,#3B82F6);">TN</div>
+            <div class="clan-item-info">
+              <div class="clan-item-name">Tetranode Group</div>
+              <div class="clan-item-meta">1,204 members · 24h cap $4.1M</div>
+            </div>
+            <div class="clan-item-rank">
+              #23
+              <small>your rank</small>
+            </div>
+          </div>
+
+          <div class="clan-item">
+            <div class="clan-item-av" style="background:linear-gradient(135deg,#FBBF24,#F43F5E);">RV</div>
+            <div class="clan-item-info">
+              <div class="clan-item-name">Rekt Ventures</div>
+              <div class="clan-item-meta">684 members · 24h cap $2.8M</div>
+            </div>
+            <div class="clan-item-rank">
+              #11
+              <small>your rank</small>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="profile-section">
+        <h3>Settings</h3>
+        <div class="settings-list">
+          <div class="setting-item">
+            <div class="setting-icon">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 12c0 4.97-4.03 9-9 9s-9-4.03-9-9 4.03-9 9-9c2.39 0 4.68.94 6.36 2.64"/><path d="m21 3-9 9-3-3"/></svg>
+            </div>
+            <div class="setting-label">Connected wallets</div>
+            <div class="setting-arrow"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m9 18 6-6-6-6"/></svg></div>
+          </div>
+          <div class="setting-item">
+            <div class="setting-icon">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg>
+            </div>
+            <div class="setting-label">Notifications</div>
+            <div class="setting-arrow"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m9 18 6-6-6-6"/></svg></div>
+          </div>
+          <div class="setting-item">
+            <div class="setting-icon">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
+            </div>
+            <div class="setting-label">Preferences</div>
+            <div class="setting-arrow"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m9 18 6-6-6-6"/></svg></div>
+          </div>
+          <div class="setting-item">
+            <div class="setting-icon">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"/><path d="M12 17h.01"/></svg>
+            </div>
+            <div class="setting-label">Help & support</div>
+            <div class="setting-arrow"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m9 18 6-6-6-6"/></svg></div>
+          </div>
+        </div>
+      </div>
+
+      <div style="height:24px;"></div>
+
+    </section>
+
+  </main>
+
+  <!-- ============ BOTTOM NAV ============ -->
+  <!-- Using <a href="#"> ensures hash-based navigation works even if JS fails -->
+  <nav class="nav">
+    <a href="#clan" class="nav-item on" data-target="clan" onclick="return switchView('clan');">
+      <svg viewBox="0 0 24 24" fill="currentColor"><path d="M16 11V3H8v8H2l10 11 10-11h-6z"/></svg>
+      <span>Clan</span>
+    </a>
+    <a href="#explore" class="nav-item" data-target="explore" onclick="return switchView('explore');">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>
+      <span>Explore</span>
+    </a>
+    <a href="#dash" class="nav-item" data-target="dash" onclick="return switchView('dash');">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 12l9-9 9 9M5 10v10h14V10"/></svg>
+      <span>Earn</span>
+    </a>
+    <a href="#tape" class="nav-item" data-target="tape" onclick="return switchView('tape');">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 3v18h18"/><path d="m7 14 4-4 4 4 6-6"/></svg>
+      <span>Tape</span>
+      <span class="nav-badge"></span>
+    </a>
+    <a href="#profile" class="nav-item" data-target="profile" onclick="return switchView('profile');">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="8" r="4"/><path d="M4 21v-1a8 8 0 0 1 16 0v1"/></svg>
+      <span>You</span>
+    </a>
+  </nav>
+
+</div>
+
+<script>
+  // switchView and toggleJoin are already defined in <head>
+  // Hash-based navigation as additional safety
+  function readHash() {
+    var h = (window.location.hash || '').replace('#', '');
+    if (h && ['clan','explore','dash','tape','profile'].indexOf(h) !== -1) {
+      window.switchView(h);
+    }
+  }
+  window.addEventListener('hashchange', readHash);
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', readHash);
+  } else {
+    readHash();
+  }
+
+  // ============ TAB SWITCHING (within views) ============
+  document.querySelectorAll('.sec-tab-row').forEach(row => {
+    row.addEventListener('click', e => {
+      if (e.target.classList.contains('sec-tab')) {
+        row.querySelectorAll('.sec-tab').forEach(t => t.classList.remove('on'));
+        e.target.classList.add('on');
+      }
+    });
+  });
+
+  // filter pills
+  document.querySelectorAll('.tape-filters').forEach(row => {
+    row.addEventListener('click', e => {
+      if (e.target.classList.contains('filter-pill')) {
+        row.querySelectorAll('.filter-pill').forEach(t => t.classList.remove('on'));
+        e.target.classList.add('on');
+      }
+    });
+  });
+
+  // ============ LIVE COUNTER ANIMATIONS ============
+  // capital influenced number ticks
+  const capNum = document.getElementById('capNum');
+  if (capNum) {
+    let capCurrent = 8.42;
+    setInterval(() => {
+      const drift = (Math.random() - 0.3) * 0.02;
+      capCurrent = Math.max(8.20, Math.min(8.80, capCurrent + drift));
+      capNum.textContent = capCurrent.toFixed(2);
+    }, 1800);
+  }
+
+  // zaps total ticks
+  const zapsNum = document.getElementById('zapsNum');
+  if (zapsNum) {
+    let zapsCurrent = 14238;
+    setInterval(() => {
+      const inc = Math.floor(Math.random() * 4);
+      zapsCurrent += inc;
+      zapsNum.textContent = zapsCurrent.toLocaleString();
+    }, 2200);
+  }
+
+  // call progress bar fills slowly
+  const progressFill = document.querySelector('.call-progress-fill');
+  if (progressFill) {
+    let pct = 34;
+    setInterval(() => {
+      pct = Math.min(48, pct + 0.3);
+      progressFill.style.width = pct + '%';
+    }, 1400);
+  }
+</script>
+
+</body>
+</html>
